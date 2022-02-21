@@ -150,7 +150,7 @@ class DetailsSheet {
   private setRatioConditionalFormat(rowIndex: number, columnIndex: number) {
     const rule = SpreadsheetApp.newConditionalFormatRule()
       .whenNumberNotEqualTo(1)
-      .setFontColor("red")
+      .setFontColor(Constant.FONTCOLOR_ERROR)
       .setRanges([this.sheet.getRange(rowIndex, columnIndex)])
       .build();
     
@@ -164,7 +164,7 @@ class DetailsSheet {
     const refSum = this.sheet.getRange(rowIndex, columnIndex).getA1Notation();
     const rule = SpreadsheetApp.newConditionalFormatRule()
       .whenFormulaSatisfied(`=NE(${refSum},${refPrice})`)
-      .setFontColor("red")
+      .setFontColor(Constant.FONTCOLOR_ERROR)
       .setRanges([this.sheet.getRange(rowIndex, columnIndex)])
       .build();
     
