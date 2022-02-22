@@ -9,69 +9,127 @@ class PaymentsSheet {
     this.sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Payments");
   }
 
-  private createTable(membersSheet: MembersSheet, detailsSheet: DetailsSheet) {
-    const membersRange = membersSheet.getMembersRange();
-    const numMembers = membersRange.getNumRows();
-    for (let fromIndex = 1; fromIndex <= numMembers; fromIndex++) {
-      // Create header
-      const columnIndex = fromIndex * 2 - 1;  // member name is set to 1st, 3rd, 5th, ... column
+  /**
+   * createHeader()
+   * @param members 
+   */
+  private createHeader(members: Members) {
+    const numMembers = members.getNumMembers();
 
-      const refFromMemberName = `Members!${membersRange.getCell(fromIndex, 1).getA1Notation()}`;
-      this.sheet.getRange(PaymentsSheet.ROW_INDEX_FROM, columnIndex).setFormula(`${refFromMemberName}&"から"`);
+    // Prepare values
+    // member names are set to even columns of table, odd columns are empty
+    const headerTable: string[][] = Util.createTable(1, numMembers * 2);
+    const membersRef = members.getMembersRef();
+    for (let i = 0; i < numMembers; i++) {
+      const columnIndex = i * 2;  // member names are set to 0th, 2nd, 4th, ... column of table
+      const refFromMemberName = `Members!${membersRef[i]}`;
+      headerTable[0][columnIndex] = `=${refFromMemberName}&"から"`
+    }
+
+    // Write values to spreadsheet
+    this.sheet.getRange(PaymentsSheet.ROW_INDEX_FROM, 1, 1, numMembers * 2).setValues(headerTable);
+
+    for (let i = 0; i < numMembers; i++) {
+      const columnIndex = i * 2 + 1;  // member name is set to 1st, 3rd, 5th, ... column
       this.sheet.getRange(PaymentsSheet.ROW_INDEX_FROM, columnIndex, 1, 2).merge()
         .setHorizontalAlignment("center")
-        .setBackground(Constant.BGCOLOR_MEMBER);
-
-      for (let toIndex = 1; toIndex <= numMembers; toIndex++) {
-        const rowIndex = PaymentsSheet.NUM_HEADER_ROWS + toIndex;
-        const refToMemberName = `Members!${membersRange.getCell(toIndex, 1).getA1Notation()}`;
-        if (toIndex === fromIndex) {
-          this.sheet.getRange(rowIndex, columnIndex)
-            .setValue("支払済")
-            .setFontColor(Constant.FONTCOLOR_INACTIVE)
-            .setBackground(Constant.BGCOLOR_INACTIVE);
-        } else {
-          this.sheet.getRange(rowIndex, columnIndex).setFormula(`${refToMemberName}&"に"`);
-        }
-
-        const buyerRangeStr = `Details!${detailsSheet.getBuyerRange().getA1Notation()}`;
-        const paymentRangeStr = `Details!${detailsSheet.getPaymentRange(fromIndex).getA1Notation()}`;
-        const paymentFormula = `SUMIF(${buyerRangeStr},${refToMemberName},${paymentRangeStr})`;
-        this.sheet.getRange(rowIndex, columnIndex + 1)
-          .setFormula(paymentFormula)
-          .setNumberFormat(Constant.FORMAT_CURRENCY);
-        
-        if (toIndex === fromIndex) {
-          this.sheet.getRange(rowIndex, columnIndex + 1)
-            .setFontColor(Constant.FONTCOLOR_INACTIVE)
-            .setBackground(Constant.BGCOLOR_INACTIVE);
-        }
-      }
-
-      /* Create cell for sum */
-      const sumStartCellStr = `R${PaymentsSheet.NUM_HEADER_ROWS + 1}C${columnIndex + 1}`;
-      const sumEndCellStr = `R${PaymentsSheet.NUM_HEADER_ROWS + numMembers}C${columnIndex + 1}`;
-      const sumFormula = `SUM(${sumStartCellStr}:${sumEndCellStr})`;
-      this.sheet.getRange(PaymentsSheet.NUM_HEADER_ROWS + numMembers + 1, columnIndex)
-        .setValue("合計")
-        .setBackground(Constant.BGCOLOR_SUM);
-      this.sheet.getRange(PaymentsSheet.NUM_HEADER_ROWS + numMembers + 1, columnIndex + 1)
-        .setFormulaR1C1(sumFormula)
-        .setNumberFormat(Constant.FORMAT_CURRENCY)
-        .setBackground(Constant.BGCOLOR_SUM);
+        .setBackground(Util.BGCOLOR_MEMBER);
     }
   }
 
+  /**
+   * createTable()
+   * @param members 
+   * @param detailsSheet 
+   */
+  private createTable(members: Members, detailsSheet: DetailsSheet) {
+    const numMembers = members.getNumMembers();
+
+    // Prepare values
+    const paymentTable: string[][] = Util.createTable(numMembers, numMembers * 2);
+    const membersRef = members.getMembersRef();
+    const refBuyerRange = `Details!${detailsSheet.getBuyerRange().getA1Notation()}`;
+
+    for (let fromIndex = 0; fromIndex < numMembers; fromIndex++) {
+      const refPaymentRange = `Details!${detailsSheet.getPaymentRange(fromIndex + 1).getA1Notation()}`;
+
+      for (let toIndex = 0; toIndex < numMembers; toIndex++) {
+        const refToMemberName = `Members!${membersRef[toIndex]}`;
+        paymentTable[toIndex][fromIndex * 2] = fromIndex === toIndex ? "支払済" : `=${refToMemberName}&"に"`;
+
+        const paymentFormula = `=SUMIF(${refBuyerRange},${refToMemberName},${refPaymentRange})`;
+        paymentTable[toIndex][fromIndex * 2 + 1] = paymentFormula
+      }
+    }
+
+    // Write values to spreadsheet
+    this.sheet.getRange(PaymentsSheet.NUM_HEADER_ROWS + 1, 1, numMembers, numMembers * 2)
+      .setValues(paymentTable)
+      .setNumberFormat(Util.FORMAT_CURRENCY);
+
+    // Set color and format
+    for (let fromIndex = 0; fromIndex < numMembers; fromIndex++) {
+      const columnIndex = fromIndex * 2 + 1;  // member name is set to 1st, 3rd, 5th, ... column
+
+      this.sheet.getRange(PaymentsSheet.NUM_HEADER_ROWS + fromIndex + 1, columnIndex, 1, 2)
+        .setFontColor(Util.FONTCOLOR_INACTIVE)
+        .setBackground(Util.BGCOLOR_INACTIVE);
+
+      this.sheet.getRange(PaymentsSheet.NUM_HEADER_ROWS + 1, columnIndex + 1, numMembers, 1)
+        .setNumberFormat(Util.FORMAT_CURRENCY);
+    }
+  }
+
+  /**
+   * createCellsForTotalPayment
+   * @param members 
+   */
+  createCellsForTotalPayment(members: Members) {
+    const numMembers = members.getNumMembers();
+
+    // Prepare values
+    const sumTable: string[][] = Util.createTable(1, numMembers * 2);
+
+    for (let i = 0; i < numMembers; i++) {
+      const columnIndex = i * 2 + 1;  // member names are set to 1st, 3rd, 5th, ... columns of spreadsheet
+      const sumStartCellStr = `R${PaymentsSheet.NUM_HEADER_ROWS + 1}C${columnIndex + 1}`;
+      const sumEndCellStr = `R${PaymentsSheet.NUM_HEADER_ROWS + numMembers}C${columnIndex + 1}`;
+      const sumFormula = `=SUM(${sumStartCellStr}:${sumEndCellStr})`;
+      sumTable[0][i * 2] = "合計";
+      sumTable[0][i * 2 + 1] = sumFormula;
+    }
+
+    // Write values to spreadsheet
+    this.sheet.getRange(PaymentsSheet.NUM_HEADER_ROWS + numMembers + 1, 1, 1, numMembers * 2)
+      .setValues(sumTable)
+      .setBackground(Util.BGCOLOR_SUM);
+
+    for (let i = 0; i < numMembers; i++) {
+      const columnIndex = i * 2 + 1;  // member names are set to 1st, 3rd, 5th, ... columns of spreadsheet
+      this.sheet.getRange(PaymentsSheet.NUM_HEADER_ROWS + numMembers + 1, columnIndex + 1)
+        .setNumberFormat(Util.FORMAT_CURRENCY)
+    }
+  }
+
+  /**
+   * initialize()
+   */
   initialize() {
     const membersSheet = new MembersSheet();
-    if (membersSheet.getMembers().length < 2) {
+    const members = new Members(membersSheet);
+    if (members.getNumMembers() < 2) {
       throw new Error("2名以上の参加者を入力してください");
     }
     const detailsSheet = new DetailsSheet();
     this.sheet.clear();
-    this.createTable(membersSheet, detailsSheet);
+    this.createHeader(members);
+    this.createTable(members, detailsSheet);
+    this.createCellsForTotalPayment(members);
   }
 
+  /**
+   * clear()
+   */
   clear() {
     this.sheet.clear();
   }
