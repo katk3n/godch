@@ -1,4 +1,5 @@
 import { DetailsSheet } from "./details";
+import { Members, MembersSheet } from "./members";
 import { Util } from "./util";
 
 export class PaymentsSheet {

@@ -1,4 +1,4 @@
-class MembersSheet {
+export class MembersSheet {
   static readonly COLUMN_INDEX_NAME = 2;
   static readonly NUM_HEADER_ROWS = 1;
   sheet: GoogleAppsScript.Spreadsheet.Sheet | null;
@@ -29,7 +29,7 @@ class MembersSheet {
   }
 }
 
-class Members {
+export class Members {
   membersRange: GoogleAppsScript.Spreadsheet.Range | null; // List of members in range format
 
   constructor(membersSheet: MembersSheet) {
