@@ -1,3 +1,6 @@
+import { DetailsSheet } from "./details";
+import { PaymentsSheet } from "./payments";
+
 function createSheets() {
   try {
     const details = new DetailsSheet();

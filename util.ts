@@ -1,4 +1,4 @@
-class Util {
+export class Util {
   static readonly FONTCOLOR_INACTIVE = "gray";
   static readonly FONTCOLOR_ERROR = "red";
   static readonly BGCOLOR_INACTIVE = "#f5f5f5";
