@@ -1,5 +1,6 @@
 import { DetailsSheet } from "./details";
 import { PaymentsSheet } from "./payments";
+import { BalanceSheet } from "./balance";
 
 function createSheets() {
   try {
@@ -7,6 +8,8 @@ function createSheets() {
     details.initialize();
     const payments = new PaymentsSheet();
     payments.initialize();
+    const balance = new BalanceSheet();
+    balance.initialize();
   } catch (e) {
     console.error(e);
     Browser.msgBox(e);
@@ -18,4 +21,6 @@ function clearSheets() {
   details.clear();
   const payments = new PaymentsSheet();
   payments.clear();
+  const balance = new BalanceSheet();
+  balance.clear();
 }
